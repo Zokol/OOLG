@@ -20,22 +20,22 @@ class Room:
 
 	# Function that connects this object to other object, if direction si not specified, it selects free direction to connect to
 	def connect(self, room, direction=None):
-		if self == room: return False 					# Check that we are not trying to connect room to itself
-		if room in self.doors.values(): return False 			# Check that this room does not already connect to the room we are trying to connect 
+		if self == room: return False, None 					# Check that we are not trying to connect room to itself
+		if room in self.doors.values(): return False, None 			# Check that this room does not already connect to the room we are trying to connect 
 		if direction == None:							# If direction is not specified
 			for d in self.doors.keys():					# Iterate door directions
 				if self.doors[d] == None:				# If door is not connected
 					if room.doors[self.opposite[d]] == None: 	# If the target room has open door at this direction (opposite to our door)
 						self.doors[d] = room			# Connect out door to target
 						room.doors[self.opposite[d]] = self	# Connect target door to our room
-						return True				# All is fine, return True
-			return False	# No free door found
+						return True, d				# All is fine, return True
+			return False, None	# No free door found
 		if direction in self.doors:	# If direction was specified, check that we have door in that direction
-			if room.doors[self.opposite[d]] == None:	# Check that target has free door at this direction (opposite to our door)
-				self.doors[d] = room			# Connect our door to target
-				room.doors[self.opposite[d]] = self	# Connect target door to our room
-				return True				# All is fine
-		return False	# Invalid direction or non-free door
+			if room.doors[self.opposite[direction]] == None:	# Check that target has free door at this direction (opposite to our door)
+				self.doors[direction] = room			# Connect our door to target
+				room.doors[self.opposite[direction]] = self	# Connect target door to our room
+				return True, direction				# All is fine
+		return False, None	# Invalid direction or non-free door
 
 def main(argv):
 	labyrinth = []
@@ -63,16 +63,6 @@ def main(argv):
 		color = pygame.Color(r(), r(), r())
 		labyrinth.append(Room(color, {'n': None, 'e': None, 's': None, 'w': None}))
 
-	
-	# Connect rooms together
-	for room_a in labyrinth:
-		room_b = random.choice(labyrinth)
-		i = 0
-		while not room_a.connect(room_b):
-			if i < 10: i += 1
-			else: break
-			room_b = random.choice(labyrinth)
-	
 	# Do graphics
 	if not pygame.font: print "Warning, no fonts"
 	if not pygame.mixer: print "Warning, no sound"
@@ -87,16 +77,29 @@ def main(argv):
 	# First room is on the center of window
 	x = 500
 	y = 500
-
-	# Iterate through labyrinth, draw_room runs the same draw_room function for rooms connected
-	for room in labyrinth: 
-		draw_room(room, [x, y], background)
-
-	# Update background with all the rooms drawn to screen
-	screen.blit(background, (0,0))
-	pygame.display.flip()
 	
 	clock = pygame.time.Clock()
+	
+	# Connect rooms together and draw connected room
+	room_a = labyrinth[0]
+	coords = [x, y]
+	ready = False
+	while not ready:
+		room_b = random.choice(labyrinth)
+		i = 0
+		connected = False
+		while not connected:
+			connected, direction = room_a.connect(room_b, random.choice(['n', 'e', 's', 'w']))
+			#if i < 10: i += 1
+			#else: ready = True
+			#room_b = random.choice(labyrinth)
+		
+		print direction
+		coords = draw_room(room_a, coords, background, direction)
+		room_a = room_b
+		# Update background with all the rooms drawn to screen
+		screen.blit(background, (0,0))
+		pygame.display.flip()
 
 	while 1:
 		clock.tick(60)
@@ -105,7 +108,8 @@ def main(argv):
 				pygame.quit()
 				sys.exit()
 
-def draw_room(room, coords, surface):
+
+def draw_room(room, coords, surface, iter_dir):
 	# Sizes of room and corridors
 	r_w = 8
 	r_h = 8
@@ -130,11 +134,12 @@ def draw_room(room, coords, surface):
 	# Tell room-object that it has been drawn, so that the room is not drawn again
 	room.drawn = True
 
-	# Iterate the connecting rooms, and run draw_room if some connecting room has not been drawn
-	for direction in room.doors:
-		if room.doors[direction] != None: # Check if the 'door' is connected to a room
-			if not room.doors[direction].drawn: # Check if room has already been drawn
-				draw_room(room.doors[direction], [coords[0] + dir_spacing[direction][0], coords[1] + dir_spacing[direction][1]], surface)
+	if iter_dir != None:
+		if room.doors[iter_dir] != None: # Check if the 'door' is connected to a room
+			if not room.doors[iter_dir].drawn: # Check if room has already been drawn
+				return draw_room(room.doors[iter_dir], [coords[0] + dir_spacing[iter_dir][0], coords[1] + dir_spacing[iter_dir][1]], surface, None)
+	
+	return coords
 	
 if __name__ == "__main__":
 	main(sys.argv[1:])
