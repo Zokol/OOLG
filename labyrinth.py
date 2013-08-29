@@ -1,5 +1,5 @@
 """
-# Object-Oriented Labyrinth Generator -- OOGL
+# Object-Oriented Labyrinth Generator -- OOLG
 # Author: Heikki Juva, heikki@juva.lu
 # Date: 29.08.2013
 # License: MIT, http://opensource.org/licenses/MIT
@@ -11,30 +11,31 @@ import random
 from pygame.locals import *
 
 class Room:
-	opposite = {'n': 's', 'e': 'w', 'w':'e', 's': 'n'}
+	opposite = {'n': 's', 'e': 'w', 'w':'e', 's': 'n'} # Define opposite doors, used when connecting rooms together, so that going out from north-door will make you come out from south-door of other room.
 
 	def __init__(self, color, doors = {'n': None, 'e': None, 's': None, 'w': None}):
-		self.color = color
-		self.drawn = False
-		self.doors = doors
+		self.color = color 	# Pygame.Color-object
+		self.drawn = False 	# Flag that is set when draw_room processes this object
+		self.doors = doors	# Dictionary that contains information of what doors are connected, default is that all doors are connected to None
 
+	# Function that connects this object to other object, if direction si not specified, it selects free direction to connect to
 	def connect(self, room, direction=None):
-		if self == room: return False
-		if room in self.doors.values(): return False
-		if direction == None:
-			for d in self.doors.keys():
-				if self.doors[d] == None:
-					if room.doors[self.opposite[d]] == None:
-						self.doors[d] = room
-						room.doors[self.opposite[d]] = self
-						return True
-			return False
-		if direction in self.doors:
-			if room.doors[self.opposite[d]] == None:
-				self.doors[d] = room
-				room.doors[self.opposite[d]] = self
-				return True
-		return False
+		if self == room: return False 					# Check that we are not trying to connect room to itself
+		if room in self.doors.values(): return False 			# Check that this room does not already connect to the room we are trying to connect 
+		if direction == None:							# If direction is not specified
+			for d in self.doors.keys():					# Iterate door directions
+				if self.doors[d] == None:				# If door is not connected
+					if room.doors[self.opposite[d]] == None: 	# If the target room has open door at this direction (opposite to our door)
+						self.doors[d] = room			# Connect out door to target
+						room.doors[self.opposite[d]] = self	# Connect target door to our room
+						return True				# All is fine, return True
+			return False	# No free door found
+		if direction in self.doors:	# If direction was specified, check that we have door in that direction
+			if room.doors[self.opposite[d]] == None:	# Check that target has free door at this direction (opposite to our door)
+				self.doors[d] = room			# Connect our door to target
+				room.doors[self.opposite[d]] = self	# Connect target door to our room
+				return True				# All is fine
+		return False	# Invalid direction or non-free door
 
 def main(argv):
 	labyrinth = []
@@ -63,21 +64,7 @@ def main(argv):
 		labyrinth.append(Room(color, {'n': None, 'e': None, 's': None, 'w': None}))
 
 	
-	# Connect rooms together, 
-	"""
-	i = 0
-	while(i < len(labyrinth)):
-		room_a = labyrinth[i]
-		room_b = random.choice(labyrinth)
-		if room_a != room_b:
-			if room_a.connect(room_b):
-				i = i + 1
-			else:
-				labyrinth[i+1].connect(room_b)
-				i = i + 2
-		else:
-			room_b = random.choice(labyrinth)
-	"""
+	# Connect rooms together
 	for room_a in labyrinth:
 		room_b = random.choice(labyrinth)
 		i = 0
